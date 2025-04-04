@@ -70,3 +70,95 @@ ORDER BY p.page_id;
 SELECT page_id FROM pages
 except 
 SELECT page_id FROM page_likes;
+
+---MID COURSE TEST
+---1
+SELECT DISTINCT replacement_cost FROM film ORDER BY replacement_cost;
+
+---2
+SELECT
+CASE
+	WHEN replacement_cost BETWEEN 9.99 AND 19.99 THEN 'low'
+	WHEN replacement_cost BETWEEN 20.00 AND 24.99 THEN 'medium'
+	WHEN replacement_cost BETWEEN 25.00 AND 29.99 THEN 'high'
+END AS categoty,
+COUNT(film_id) AS number_of_film
+FROM film
+GROUP BY categoty;
+
+---3
+SELECT
+	f.title,
+	f.length,
+	c.name
+FROM film f
+LEFT JOIN film_category fc
+ON f.film_id = fc.film_id
+LEFT JOIN category c
+ON fc.category_id = c.category_id
+WHERE c.name IN ('Drama', 'Sports')
+ORDER BY f.length DESC;
+
+---4
+SELECT
+	c.name AS category,
+	COUNT(f.title) AS number_of_film
+FROM film f
+LEFT JOIN film_category fc
+ON f.film_id = fc.film_id
+LEFT JOIN category c
+ON fc.category_id = c.category_id
+GROUP BY c.name
+ORDER BY COUNT(f.title) DESC;
+
+---5
+SELECT 
+a.first_name,
+a.last_name,
+COUNT (film_id) AS number_of_film
+FROM actor a
+LEFT JOIN film_actor fa
+ON a.actor_id = fa.actor_id
+GROUP BY a.first_name, a.last_name
+ORDER BY number_of_film DESC;
+
+---6
+SELECT 
+	COUNT (a.address_id)
+FROM address a
+LEFT JOIN customer c
+ON a.address_id = c.address_id
+WHERE c.address_id IS NULL;
+
+---7
+SELECT 
+ct.city,
+SUM(p.amount) AS total_revenue
+FROM city ct
+LEFT JOIN address a
+ON ct.city_id = a.city_id
+LEFT JOIN customer c
+ON a.address_id = c.address_id
+LEFT JOIN payment p
+ON c.customer_id = p.customer_id
+GROUP BY ct.city
+HAVING SUM(p.amount) IS NOT NULL
+ORDER BY SUM(p.amount) DESC;
+
+---8
+SELECT 
+country.country || ', ' || ct.city,
+SUM(p.amount) AS total_revenue
+FROM country
+LEFT JOIN city ct
+ON country.country_id = ct.country_id
+LEFT JOIN address a
+ON ct.city_id = a.city_id
+LEFT JOIN customer c
+ON a.address_id = c.address_id
+LEFT JOIN payment p
+ON c.customer_id = p.customer_id
+GROUP BY country.country, ct.city
+HAVING SUM(p.amount) IS NOT NULL
+ORDER BY SUM(p.amount);
+
