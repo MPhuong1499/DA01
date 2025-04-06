@@ -113,4 +113,86 @@ WHERE product_key IN (SELECT DISTINCT product_key FROM Product)
 GROUP BY customer_id
 HAVING COUNT(DISTINCT product_key) = (SELECT COUNT (*) FROM Product)
 
+---9
+SELECT e.employee_id FROM Employees e
+LEFT JOIN Employees m
+ON e.manager_id = m.employee_id
+WHERE e.salary < 30000
+AND m.employee_id IS NULL
+AND e.manager_id IS NOT NULL
+ORDER BY e.employee_id
+
+SELECT employee_id
+FROM Employees 
+WHERE salary < 30000 AND manager_id NOT IN (
+    SELECT employee_id FROM Employees
+)
+ORDER BY employee_id
+
+---10
+SELECT 
+    o.employee_id,
+    e.department_id
+FROM
+    (SELECT employee_id
+    FROM Employee
+    GROUP BY employee_id
+    HAVING COUNT(department_id) =1) AS o
+LEFT JOIN Employee e
+ON o.employee_id = e.employee_id
+UNION
+SELECT employee_id, department_id
+FROM Employee
+WHERE primary_flag = 'Y'
+
+        ---other approach
+SELECT employee_id, department_id FROM Employee WHERE employee_id IN (
+SELECT employee_id FROM Employee
+GROUP BY employee_id HAVING COUNT(*) =1) OR primary_flag = 'Y'
+
+---11
+(SELECT name AS results
+FROM Users u
+LEFT JOIN MovieRating mr
+ON u.user_id = mr.user_id
+GROUP BY name
+ORDER BY COUNT(mr.user_id) DESC, name
+LIMIT 1)
+UNION ALL
+(SELECT title AS results
+FROM Movies m 
+LEFT JOIN MovieRating mr
+ON m.movie_id = mr.movie_id
+WHERE EXTRACT (MONTH FROM created_at) = 2 AND EXTRACT (YEAR FROM created_at) = 2020
+GROUP BY title
+ORDER BY AVG(rating) DESC, title
+LIMIT 1)
+
+---12
+WITH cte AS (
+SELECT requester_id AS user_id, COUNT(accepter_id) AS friend
+FROM RequestAccepted
+GROUP BY requester_id
+UNION ALL
+SELECT accepter_id AS user_id, COUNT(requester_id) AS friend
+FROM RequestAccepted
+GROUP BY accepter_id)
+SELECT 
+user_id AS id,
+SUM(friend) AS num
+FROM cte
+GROUP BY user_id
+ORDER BY SUM(friend) DESC
+LIMIT 1
+
+        ---other approach
+SELECT user_id AS id, COUNT(*) AS num
+FROM
+    (SELECT requester_id AS user_id FROM RequestAccepted
+    UNION ALL 
+    SELECT accepter_id AS user_id FROM RequestAccepted)
+GROUP BY user_id
+ORDER BY COUNT(*) DESC
+LIMIT 1
+
 
