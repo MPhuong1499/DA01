@@ -66,3 +66,51 @@ SUM(amount) AS trans_total_amount,
 SUM (CASE WHEN state = 'approved' THEN amount ELSE 0 END) AS approved_total_amount
 FROM Transactions
 GROUP BY TO_CHAR(trans_date, 'yyyy-mm'), country
+
+---cte approach
+WITH transactions AS (
+    SELECT
+        TO_CHAR(trans_date, 'yyyy-mm') AS month,
+        country,
+        COUNT(id) AS trans_count,
+        SUM(amount) AS trans_total_amount
+    FROM Transactions
+    GROUP BY month, country
+),
+approved_transactions AS (
+    SELECT
+        TO_CHAR(trans_date, 'yyyy-mm') AS month,
+        country,
+        COUNT(id) AS approved_count,
+        SUM(amount) AS approved_total_amount
+    FROM Transactions
+    WHERE state = 'approved'
+    GROUP BY month, country
+)
+
+SELECT 
+    t.month, t.country, trans_count, approved_count, trans_total_amount, approved_total_amount
+FROM transactions t
+JOIN approved_transactions a
+ON t.country = a.country AND t.month = a.month
+        
+---7
+WITH cte AS
+(SELECT product_id,
+MIN(year) AS first_year
+FROM Sales
+GROUP BY product_id)
+SELECT c.product_id, first_year, quantity, price 
+FROM Sales s
+JOIN cte c
+ON s.product_id = c.product_id AND s.year = c.first_year;
+
+---8
+SELECT
+customer_id
+FROM Customer
+WHERE product_key IN (SELECT DISTINCT product_key FROM Product)
+GROUP BY customer_id
+HAVING COUNT(DISTINCT product_key) = (SELECT COUNT (*) FROM Product)
+
+
