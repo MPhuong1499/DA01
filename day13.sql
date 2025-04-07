@@ -97,7 +97,7 @@ SELECT
     COALESCE(a.approved_total_amount, 0) AS approved_total_amount
 FROM transactions1 t
 LEFT JOIN approved_transactions a
-ON t.country = a.country AND t.month = a.month;
+ON t.country IS NOT DISTINCT FROM a.country AND t.month = a.month; ---Therefore, when t.country is NULL (from transactions) and a.country is NULL (from approved_transactions), the condition t.country = a.country does not match, because NULL = NULL is not TRUE. To handle NULL values correctly in the join, we need to treat NULL as equal to NULL. In PostgreSQL, you can use the IS NOT DISTINCT FROM operator, which considers NULL equal to NULL and non-NULL values equal if they match:
         
         ---- other approach
 SELECT 
