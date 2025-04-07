@@ -68,32 +68,48 @@ FROM Transactions
 GROUP BY TO_CHAR(trans_date, 'yyyy-mm'), country
 
 ---cte approach
-WITH transactions AS (
+WITH transactions1 AS (
     SELECT
-        TO_CHAR(trans_date, 'yyyy-mm') AS month,
+        TO_CHAR(trans_date, 'YYYY-MM') AS month,
         country,
-        COUNT(id) AS trans_count,
+        COUNT(*) AS trans_count,
         SUM(amount) AS trans_total_amount
     FROM Transactions
-    GROUP BY month, country
+    GROUP BY TO_CHAR(trans_date, 'YYYY-MM'), country
 ),
 approved_transactions AS (
     SELECT
-        TO_CHAR(trans_date, 'yyyy-mm') AS month,
+        TO_CHAR(trans_date, 'YYYY-MM') AS month,
         country,
-        COUNT(id) AS approved_count,
+        COUNT(*) AS approved_count,
         SUM(amount) AS approved_total_amount
     FROM Transactions
     WHERE state = 'approved'
-    GROUP BY month, country
+    GROUP BY TO_CHAR(trans_date, 'YYYY-MM'), country
 )
 
 SELECT 
-    t.month, t.country, trans_count, approved_count, trans_total_amount, approved_total_amount
-FROM transactions t
-JOIN approved_transactions a
-ON t.country = a.country AND t.month = a.month
+    t.month,
+    t.country,
+    t.trans_count,
+    COALESCE(a.approved_count, 0) AS approved_count,
+    t.trans_total_amount,
+    COALESCE(a.approved_total_amount, 0) AS approved_total_amount
+FROM transactions1 t
+LEFT JOIN approved_transactions a
+ON t.country = a.country AND t.month = a.month;
         
+        ---- other approach
+SELECT 
+    TO_CHAR(trans_date, 'YYYY-MM') AS month,
+    country,
+    COUNT(*) AS trans_count,
+    COUNT(*) FILTER (WHERE state = 'approved') AS approved_count,
+    SUM(amount) AS trans_total_amount,
+    SUM(amount) FILTER (WHERE state = 'approved') AS approved_total_amount
+FROM Transactions
+GROUP BY TO_CHAR(trans_date, 'YYYY-MM'), country;
+
 ---7
 WITH cte AS
 (SELECT product_id,
