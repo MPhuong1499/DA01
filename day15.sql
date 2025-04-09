@@ -94,3 +94,47 @@ ON t1.merchant_id = t1.merchant_id
   AND t2.transaction_timestamp - t1.transaction_timestamp <= INTERVAL '10 MINUTES';
 
 ---other approach
+WITH cte AS (
+SELECT *,
+LEAD(transaction_timestamp) OVER (PARTITION BY merchant_id,credit_card_id,amount ORDER BY transaction_timestamp) - transaction_timestamp AS diff,
+LEAD(transaction_timestamp) OVER (PARTITION BY merchant_id,credit_card_id,amount ORDER BY transaction_timestamp) AS duplicate_timestamp,
+LEAD(transaction_id) OVER (PARTITION BY merchant_id,credit_card_id,amount ORDER BY transaction_timestamp) AS duplicate_transaction_id
+FROM transactions
+)
+SELECT COUNT (*) AS payment_count 
+FROM cte 
+WHERE diff <= INTERVAL '10 MINUTES'
+
+---7
+WITH cte AS ( 
+SELECT 
+category, 
+product, 
+SUM(spend) AS total_spend,
+RANK() OVER (
+        PARTITION BY category
+        ORDER BY SUM(spend) DESC
+    ) AS spending_rank
+FROM product_spend
+WHERE EXTRACT(YEAR FROM transaction_date) = 2022 
+GROUP BY category, product
+)
+SELECT category, product, total_spend
+FROM cte 
+WHERE spending_rank <= 2
+
+---8
+WITH cte AS(
+SELECT 
+a.artist_name,
+DENSE_RANK () OVER (ORDER BY COUNT(*) DESC) AS artist_rank
+FROM artists a
+LEFT JOIN songs s 
+ON a.artist_id = s.artist_id
+LEFT JOIN global_song_rank g 
+ON s.song_id = g.song_id
+WHERE rank <=10
+GROUP BY a.artist_name
+)
+SELECT * FROM cte 
+WHERE artist_rank <=5
