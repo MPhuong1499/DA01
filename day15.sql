@@ -72,3 +72,25 @@ FROM tweets;
 
 
 ---6
+SELECT
+COUNT (*) AS payment_count
+FROM transactions t1
+JOIN transactions t2
+ON t1.merchant_id = t2.merchant_id
+AND t1.credit_card_id = t2.credit_card_id
+AND t1.amount = t2.amount
+AND t1.transaction_timestamp < t2.transaction_timestamp
+WHERE (ABS(EXTRACT(HOUR FROM t2.transaction_timestamp - t1.transaction_timestamp)*60) + ABS(EXTRACT(MINUTE FROM t2.transaction_timestamp - t1.transaction_timestamp))) <= 10
+
+---other from discussion
+SELECT 
+  COUNT(*) AS payment_count
+FROM transactions AS t1
+JOIN transactions AS t2
+ON t1.merchant_id = t1.merchant_id
+  AND t1.credit_card_id = t2.credit_card_id
+  AND t1.amount = t2.amount
+  AND t1.transaction_timestamp < t2.transaction_timestamp
+  AND t2.transaction_timestamp - t1.transaction_timestamp <= INTERVAL '10 MINUTES';
+
+---other approach
