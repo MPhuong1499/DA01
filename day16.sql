@@ -95,5 +95,36 @@ SELECT ROUND(SUM(tiv_2016)::NUMERIC,2) AS tiv_2016 FROM Insurance
 WHERE (tiv_2015) IN (SELECT tiv_2015 FROM Insurance GROUP BY tiv_2015 HAVING COUNT(*) > 1) AND
 (lat, lon) IN (SELECT lat, lon FROM Insurance GROUP BY lat,lon HAVING count(*) = 1)
 
+---other approach
+WITH counts AS (
+    SELECT 
+        pid,
+        tiv_2015,
+        tiv_2016,
+        lat,
+        lon,
+        COUNT(*) OVER (PARTITION BY tiv_2015) AS tiv_2015_count,
+        COUNT(*) OVER (PARTITION BY lat, lon) AS location_count
+    FROM Insurance
+)
+SELECT 
+    ROUND(SUM(tiv_2016), 2) AS tiv_2016
+FROM counts
+WHERE 
+    tiv_2015_count > 1  -- Same tiv_2015 as another policyholder
+    AND location_count = 1;  -- Unique (lat, lon) pair
+
+---6
+WITH cte AS (
+SELECT d.name AS Department, e.name AS Employee, e.salary AS Salary,
+DENSE_RANK () OVER (PARTITION BY d.name ORDER BY e.salary DESC) AS ranking
+FROM Employee e
+JOIN Department d
+ON e.departmentId = d.id
+)
+SELECT Department, Employee, Salary FROM cte
+WHERE ranking <=3
+
+---7
 
 
