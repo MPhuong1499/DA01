@@ -16,3 +16,28 @@ WHERE order_date = earliest_order AND type = 'immediate';
 select ROUND (100.0 * sum(CASE WHEN order_date=customer_pref_delivery_date THEN 1 ELSE 0 END) / count(*) , 2) as immediate_percentage 
 from Delivery 
 where (customer_id, order_date) in (select customer_id, min(order_date) from Delivery group by customer_id);
+
+---2
+WITH cte AS(
+SELECT *,
+RANK () OVER (PARTITION BY player_id  ORDER BY event_date) AS day_rank,
+LEAD(event_date) OVER (PARTITION BY player_id  ORDER BY event_date) - event_date AS diff
+FROM Activity
+)
+SELECT ROUND(COUNT (*)::NUMERIC / (SELECT COUNT(DISTINCT player_id) FROM Activity),2) AS fraction
+FROM cte
+WHERE day_rank = 1 AND diff = 1
+
+---other approach
+SELECT ROUND(
+    1.0 * COUNT(player_id) / 
+    (SELECT COUNT(DISTINCT player_id)
+    FROM Activity), 2) AS fraction
+FROM Activity
+WHERE (player_id, event_date) IN (
+    SELECT player_id, MIN(event_date) + 1
+    FROM Activity
+    GROUP BY player_id
+)
+
+---3
