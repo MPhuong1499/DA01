@@ -126,5 +126,14 @@ SELECT Department, Employee, Salary FROM cte
 WHERE ranking <=3
 
 ---7
+WITH cte AS(
+SELECT *,
+SUM(weight) OVER (ORDER BY turn ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
+FROM Queue
+)
+SELECT person_name FROM cte
+WHERE turn = (SELECT MAX(turn) FROM cte WHERE sum <= 1000)
+
+---8
 
 
