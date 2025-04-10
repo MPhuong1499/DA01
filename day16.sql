@@ -41,3 +41,32 @@ WHERE (player_id, event_date) IN (
 )
 
 ---3
+SELECT 
+s1.id,
+    CASE 
+        WHEN MOD(s1.id, 2) = 0 THEN (SELECT student FROM seat s2 WHERE s2.id = s1.id-1)
+        WHEN s1.id = (SELECT MAX(id) FROM seat) AND MOD(s1.id, 2) = 1 THEN student
+        ELSE (SELECT student FROM seat s3 WHERE s3.id = s1.id+1)
+    END AS student
+FROM seat s1
+
+---other approach
+SELECT 
+id,
+    CASE 
+        WHEN MOD(id, 2) = 0 THEN LAG(student) OVER (ORDER BY id)
+        WHEN id = (SELECT MAX(id) FROM seat) AND MOD(id, 2) = 1 THEN student
+        ELSE LEAD(student) OVER (ORDER BY id)
+    END AS student
+FROM seat 
+
+---from discussion
+SELECT(
+  CASE WHEN id % 2 = 1 and  id = (select max(id) from Seat) THEN id
+  WHEN id % 2 = 1 THEN id + 1
+  WHEN id % 2 = 0 THEN id - 1
+  END ) AS id, student 
+FROM Seat
+ORDER BY id
+
+
