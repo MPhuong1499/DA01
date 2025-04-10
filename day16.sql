@@ -69,4 +69,31 @@ SELECT(
 FROM Seat
 ORDER BY id
 
+---4
+
+---5
+SELECT ROUND(SUM(tiv_2016)::NUMERIC,2) AS tiv_2016
+FROM Insurance
+WHERE pid IN (
+(SELECT
+DISTINCT i1.pid
+FROM Insurance i1
+JOIN Insurance i2
+ON i1.tiv_2015 = i2.tiv_2015
+AND i1.pid <> i2.pid)
+EXCEPT
+(SELECT DISTINCT i1.pid
+FROM Insurance i1
+JOIN Insurance i2
+ON i1.lat = i2.lat
+AND i1.lon = i2.lon
+AND i1.pid <> i2.pid)
+)
+
+---from dícussion
+SELECT ROUND(SUM(tiv_2016)::NUMERIC,2) AS tiv_2016 FROM Insurance 
+WHERE (tiv_2015) IN (SELECT tiv_2015 FROM Insurance GROUP BY tiv_2015 HAVING COUNT(*) > 1) AND
+(lat, lon) IN (SELECT lat, lon FROM Insurance GROUP BY lat,lon HAVING count(*) = 1)
+
+
 
