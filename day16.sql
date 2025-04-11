@@ -70,7 +70,26 @@ FROM Seat
 ORDER BY id
 
 ---4
-
+WITH cte1 AS(
+WITH cte AS(
+SELECT
+visited_on,
+SUM(amount) AS total_amount
+FROM Customer
+GROUP BY visited_on
+)
+SELECT 
+visited_on,
+SUM(total_amount) OVER (ORDER BY visited_on ROWS BETWEEN 6 PRECEDING AND CURRENT ROW) AS amount,
+ROUND(AVG(total_amount) OVER (ORDER BY visited_on ROWS BETWEEN 6 PRECEDING AND CURRENT ROW),2) AS average_amount,
+RANK () OVER (ORDER BY visited_on) AS ranking
+FROM cte
+)
+SELECT
+visited_on, amount, average_amount
+FROM cte1 
+WHERE ranking > 6
+    
 ---5
 SELECT ROUND(SUM(tiv_2016)::NUMERIC,2) AS tiv_2016
 FROM Insurance
@@ -164,6 +183,38 @@ LEFT JOIN price_on_date pod
         AND p.change_date <= '2019-08-16'
     )
 ORDER BY dp.product_id;
+
+---other approach
+select
+    distinct product_id,
+    10 as price
+from
+    Products
+group by
+    product_id
+having
+    min(change_date) > '2019-08-16'
+
+union
+
+select
+    product_id,
+    new_price as price
+from
+    Products
+where
+    (product_id, change_date) in (
+        select
+            product_id,
+            max(change_date)
+        from
+            Products
+        where
+            change_date <= '2019-08-16'
+        group by
+            product_id
+        )
+
 
 
 
