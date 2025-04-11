@@ -135,5 +135,35 @@ SELECT person_name FROM cte
 WHERE turn = (SELECT MAX(turn) FROM cte WHERE sum <= 1000)
 
 ---8
+WITH price_on_date AS (
+    SELECT 
+        product_id,
+        new_price,
+        change_date,
+        FIRST_VALUE(new_price) OVER (
+            PARTITION BY product_id
+            ORDER BY change_date DESC
+        ) AS latest_price
+    FROM Products
+    WHERE change_date <= '2019-08-16'
+),
+distinct_products AS (
+    SELECT DISTINCT product_id
+    FROM Products
+)
+SELECT 
+    dp.product_id,
+    COALESCE(pod.latest_price, 10) AS price
+FROM distinct_products dp
+LEFT JOIN price_on_date pod
+    ON dp.product_id = pod.product_id
+    AND pod.change_date = (
+        SELECT MAX(change_date)
+        FROM Products p
+        WHERE p.product_id = dp.product_id
+        AND p.change_date <= '2019-08-16'
+    )
+ORDER BY dp.product_id;
+
 
 
