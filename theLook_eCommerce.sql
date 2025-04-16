@@ -120,38 +120,91 @@ SELECT
 FROM cte
 
 --- Cohort analysis
+--- step_1: find the first purchased date + selecting needed data
 
-WITH collected_metrics AS (
-SELECT
-o.order_id,
-o.user_id,
-FORMAT_TIMESTAMP('%Y-%m', o.created_at) AS purchase_date,
-ROUND(SUM(oi.sale_price), 2) AS spending
-FROM bigquery-public-data.thelook_ecommerce.orders o
-JOIN bigquery-public-data.thelook_ecommerce.order_items oi
-ON o.order_id = oi.order_id
-GROUP BY o.order_id, o.user_id, FORMAT_TIMESTAMP('%Y-%m', o.created_at)
-),
-cohort_metrics AS(
-SELECT
-*,
-MIN(purchase_date) OVER (PARTITION BY user_id) AS cohort_date,
-DATE_DIFF(
-PARSE_DATE('%Y-%m', purchase_date),
-PARSE_DATE('%Y-%m', MIN(purchase_date) OVER (PARTITION BY user_id)),
-MONTH
-) + 1 AS index_month
-FROM collected_metrics)
-SELECT cohort_date, index_month,
-COUNT(user_id) AS cnt_user,
-ROUND(SUM(spending),2) AS revenue
-FROM cohort_metrics
-WHERE index_month <= 4
-GROUP BY cohort_date, index_month
-ORDER BY cohort_date, index_month
+WITH selected_data AS(
+  SELECT 
+    user_id,
+    CAST(created_at AS DATE) AS created_at,
+    CAST(MIN(created_at) OVER (PARTITION BY user_id) AS DATE) AS first_date
+  FROM bigquery-public-data.thelook_ecommerce.order_items
+  WHERE FORMAT_DATE('%Y-%m', created_at) BETWEEN '2021-05' AND '2022-04'
+)
 
+-- step_2: monthly difference from the first purchase time (index column)
 
+, index_data AS (
+  SELECT 
+    FORMAT_TIMESTAMP('%Y-%m', first_date) AS cohort_date,
+    DATE_DIFF(created_at, first_date, MONTH)+1 AS index_month,
+    user_id
+  FROM selected_data
+)
+-- step_3: total revenue and total customer 
 
+, summary_table AS ( 
+  SELECT 
+  cohort_date,
+  index_month,
+  COUNT(DISTINCT user_id) AS cnt_customer
+  FROM index_data
+  WHERE index_month <=12
+  GROUP BY cohort_date, index_month
+  ORDER BY cohort_date, index_month
+)
+-- step_4: Cohort Chart = Pivot CASE-WHEN
+
+, cohort_table AS (
+SELECT  cohort_date,
+        SUM(CASE WHEN index_month = 1 then cnt_customer ELSE 0 END) as t1,
+        SUM(CASE WHEN index_month = 2 then cnt_customer ELSE 0 END) as t2,
+        SUM(CASE WHEN index_month = 3 then cnt_customer ELSE 0 END) as t3,
+        SUM(CASE WHEN index_month = 4 then cnt_customer ELSE 0 END) as t4,
+	      SUM(CASE WHEN index_month = 5 then cnt_customer ELSE 0 END) as t5,
+        SUM(CASE WHEN index_month = 6 then cnt_customer ELSE 0 END) as t6,
+        SUM(CASE WHEN index_month = 7 then cnt_customer ELSE 0 END) as t7,
+        SUM(CASE WHEN index_month = 8 then cnt_customer ELSE 0 END) as t8,
+	      SUM(CASE WHEN index_month = 9 then cnt_customer ELSE 0 END) as t9,
+        SUM(CASE WHEN index_month = 10 then cnt_customer ELSE 0 END) as t10,
+        SUM(CASE WHEN index_month = 11 then cnt_customer ELSE 0 END) as t11,
+        SUM(CASE WHEN index_month = 12 then cnt_customer ELSE 0 END) as t12
+FROM summary_table
+GROUP BY cohort_date
+ORDER BY cohort_date
+)
+
+-- Retention Cohort 
+, retention_cohort AS(
+SELECT  cohort_date,
+        ROUND(100.00* t1 / t1 ,2) as t1,
+        ROUND(100.00* t2 / t1 ,2) as t2,
+        ROUND(100.00* t3 / t1 ,2) as t3,
+        ROUND(100.00* t4 / t1 ,2) as t4,
+	      ROUND(100.00* t5 / t1 ,2) as t5,
+        ROUND(100.00* t6 / t1 ,2) as t6,
+        ROUND(100.00* t7 / t1 ,2) as t7,
+        ROUND(100.00* t8 / t1 ,2) as t8,
+	      ROUND(100.00* t9 / t1 ,2) as t9,
+        ROUND(100.00* t10 / t1 ,2) as t10,
+        ROUND(100.00* t11 / t1 ,2) as t11,
+        ROUND(100.00* t12 / t1 ,2) as t12
+FROM cohort_table
+)
+-- Churn Cohort
+SELECT  cohort_date,
+        ROUND(100 - 100.00* t1 / t1 ,2) as t1,
+        ROUND(100 - 100.00* t2 / t1 ,2) as t2,
+        ROUND(100 - 100.00* t3 / t1 ,2) as t3,
+        ROUND(100 - 100.00* t4 / t1 ,2) as t4,
+	      ROUND(100 - 100.00* t5 / t1 ,2) as t5,
+        ROUND(100 - 100.00* t6 / t1 ,2) as t6,
+        ROUND(100 - 100.00* t7 / t1 ,2) as t7,
+        ROUND(100 - 100.00* t8 / t1 ,2) as t8,
+	      ROUND(100 - 100.00* t9 / t1 ,2) as t9,
+        ROUND(100 - 100.00* t10 / t1 ,2) as t10,
+        ROUND(100 - 100.00* t11 / t1 ,2) as t11,
+        ROUND(100 - 100.00* t12 / t1 ,2) as t12
+FROM retention_cohort
 
 
 
