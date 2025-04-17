@@ -250,13 +250,25 @@ WITH user_rfm AS(
   FROM rfm_calculate
 )
 ---B4: Tính tỉ trọng segment
-
+, segment_counts AS (
 SELECT
-  rfm_user_type,
-  COUNT(DISTINCT user_id),
-  SUM(COUNT(DISTINCT user_id)) OVER
+  rfm_segment,
+  COUNT(DISTINCT user_id) AS user_count
 FROM rfm_user_type
 GROUP BY rfm_segment
+)
+, total_users AS (
+  SELECT SUM(user_count) AS total_user_count
+  FROM segment_counts
+)
+SELECT 
+  sc.rfm_segment,
+  sc.user_count,
+  ROUND((sc.user_count / tu.total_user_count) * 100, 2) AS percentage_of_total
+FROM segment_counts sc
+CROSS JOIN total_users tu
+ORDER BY percentage_of_total DESC;
+
 
 
 
