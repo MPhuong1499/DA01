@@ -206,6 +206,57 @@ SELECT  cohort_date,
         ROUND(100 - 100.00* t12 / t1 ,2) as t12
 FROM retention_cohort
 
+--- User segmentation using RFM method
+
+---B1: tinh gia tri RFM
+WITH user_rfm AS(
+  SELECT 
+  user_id,
+  DATE_DIFF(CURRENT_DATE,CAST(FORMAT_TIMESTAMP('%Y-%m-%d', MAX(created_at)) AS DATE),DAY) AS recency,
+  COUNT(DISTINCT order_id) AS frequency,
+  ROUND(SUM(sale_price),2) AS monetary
+  FROM bigquery-public-data.thelook_ecommerce.order_items
+  WHERE FORMAT_DATE('%Y-%m', created_at) BETWEEN '2021-05' AND '2022-04'
+  GROUP BY user_id
+  )
+---B2: Chia các giá trị thành các khoảng trên thang điểm 1-5
+, rfm_calculate AS(
+  SELECT 
+  user_id,
+  NTILE(5) OVER(ORDER BY recency DESC) AS R_score,
+  NTILE(5) OVER(ORDER BY frequency) AS F_score,
+  NTILE(5) OVER(ORDER BY monetary) AS M_score
+  FROM user_rfm
+)
+---B3: Phân nhóm theo tổ hợp R-F-M
+, rfm_user_type AS(
+  SELECT 
+  user_id,
+  CONCAT(R_score,F_score,M_score) AS rfm,
+  CASE 
+        WHEN CONCAT(R_score,F_score,M_score) IN ('555', '554', '544', '545', '454', '455', '445') THEN 'Champions'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('543', '444', '435', '355', '354', '345', '344', '335') THEN 'Loyal Customers'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('553', '551', '552', '541', '542', '533', '532', '531', '452', '451', '442', '441', '431', '453', '433', '432', '423', '353', '352', '351','342', '341', '333', '323') THEN 'Potential Loyalists'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('512', '511', '422', '421', '412', '411', '311') THEN 'Recent Customers'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('525', '524', '523', '522', '521', '515', '514', '513', '425', '424', '413', '414', '415', '315', '314', '313') THEN 'Promising'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('535', '534', '443', '434', '343', '334', '325', '324') THEN 'Customers Needing Attention'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('331', '321', '312', '221', '213') THEN 'About to Sleep'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('255', '254', '245', '244', '253', '252', '243', '242', '235', '234', '225', '224', '153', '152', '145', '143', '142', '135', '134', '133', '125', '124') THEN 'At Risk'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('155', '154', '144', '214', '215', '115', '114', '113') THEN 'Cannot Lose Them'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('332', '322', '231', '241', '251', '233', '232', '223', '222', '132', '123', '122', '212', '211') THEN 'Hibernating'
+        WHEN CONCAT(R_score,F_score,M_score) IN ('111', '112', '121', '131', '141', '151') THEN 'Lost'
+        ELSE 'Other'
+      END AS rfm_segment
+  FROM rfm_calculate
+)
+---B4: Tính tỉ trọng segment
+
+SELECT
+  rfm_user_type,
+  COUNT(DISTINCT user_id),
+  SUM(COUNT(DISTINCT user_id)) OVER
+FROM rfm_user_type
+GROUP BY rfm_segment
 
 
 
